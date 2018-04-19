@@ -32,8 +32,7 @@ dtypes_test = {
 #train_9 = train_9.drop(['attributed_time'], axis=1)
 
 total = ["train-day8","train-day9","test"]
-header = ['p_click_ip','f_click_ip','p_click_ip_channel','f_click_ip_channel','p_click_ip_app','f_click_ip_app',\
-          'p_click_ip_device','f_click_ip_device','p_click_ip_os','f_click_ip_os']
+header = ['p_click_ip','p_click_ip_channel','p_click_ip_app','p_click_ip_device','p_click_ip_os','p_click_ip_app_os_device','p_click_ip_app_os']
 
 for key in total:
 
@@ -51,23 +50,24 @@ for key in total:
 
     # Previous/future total click per ip
     df['p_click_ip'] = df.groupby(by=['ip']).cumcount()
-    df['f_click_ip'] = df.groupby(by=['ip']).cumcount(ascending=False)
 
     # Previous/future click each (ip, channel)
     df['p_click_ip_channel'] = df.groupby(by=['ip','channel']).cumcount()
-    df['f_click_ip_channel'] = df.groupby(by=['ip','channel']).cumcount(ascending=False)
 
     # Previous/future click each (ip, app)
     df['p_click_ip_app'] = df.groupby(by=['ip','app']).cumcount()
-    df['f_click_ip_app'] = df.groupby(by=['ip','app']).cumcount(ascending=False)
 
     # Previous/future click each (ip, device)
     df['p_click_ip_device'] = df.groupby(by=['ip','device']).cumcount()
-    df['f_click_ip_device'] = df.groupby(by=['ip','device']).cumcount(ascending=False)
 
     # Previous/future click each (ip, os)
     df['p_click_ip_os'] = df.groupby(by=['ip','os']).cumcount()
-    df['f_click_ip_os'] = df.groupby(by=['ip','os']).cumcount(ascending=False)
+
+    # Previous click each (ip, app, os, device)
+    df['p_click_ip_app_os_device'] = df.groupby(by=['ip','app','os','device']).cumcount()
+
+    # Previous click each (ip, app, os)
+    df['p_click_ip_app_os'] = df.groupby(by=['ip','app','os']).cumcount()
 
     df.to_csv("../feature/"+key+"-pfclick.csv", columns = header, index=False)
     del df
