@@ -20,13 +20,13 @@ params = {
         'application' :'binary',
         'learning_rate' : 0.1,
         'num_iterations': 1000,
-        'boosting' : 'goss',
+        'boosting' : 'rf',
         
         # Deal with overfitting
-#        'bagging_fraction': 0.9, 
-#        'bagging_freq': 1,
+        'bagging_fraction': 0.9, 
+        'bagging_freq': 1,
         'min_data_in_leaf': 5000,
-        'feature_fraction': 0.8,
+        'feature_fraction': 0.2,
         'num_leaves': 31,
         'max_depth': -1,
         'max_bin': 255,

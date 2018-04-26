@@ -1,6 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import gc
+import lightgbm as lgbm
+from sklearn.metrics import roc_auc_score
 
 dtypes = {
     'app':'uint16',
@@ -24,23 +26,14 @@ dtypes = {
     'next_click_ip_device':'float64',
     'next_click_ip_os':'float64',
     'p_click_ip':'uint32',
-    'f_click_ip':'uint32',
     'p_click_ip_channel':'uint32',
-    'f_click_ip_channel':'uint32',
     'p_click_ip_app':'uint32',
-    'f_click_ip_app':'uint32',
     'p_click_ip_device':'uint32',
-    'f_click_ip_device':'uint32',
     'p_click_ip_os':'uint32',
-    'f_click_ip_os':'uint32',
     'click_ip_app_os_device_hour':'uint32',
     'click_ip_app_os_device_minute':'uint32',
     'click_app_device':'uint32',
     'click_os_device':'uint32',
-    'ip_minute_ave':'float32',
-    'ip_minute_std':'float32',
-    'ins_minute_ave':'float32',
-    'ins_minute_std':'float32',
     'hour':'uint8',
     'click_device_channel':'uint32',
     'click_ip_app_hour':'uint32',
@@ -56,12 +49,13 @@ dtypes = {
     'next_click_ip_app_os':'float64',
     'next_click_app_channel':'float64',
     'p_click_ip_app_os_device':'uint32',
-    'p_click_ip_app_os':'uint32'
+    'p_click_ip_app_os':'uint32',
+    'tar_app':'float32',
+    'tar_os':'float32',
+    'tar_device':'float32',
+    'tar_channel':'float32'
 }
 
-#use_features = ['app','device','os','channel','total_click','click_per_channel','click_per_os','click_app_os','click_app_channel','click_os_channel','click_ip_app_os_channel_hour',\
-#               'click_ip_app_os_device_hour','click_ip_app_os_device_minute','click_app_device','click_os_device','ins_minute_ave',\
-#               'hour','click_device_channel','click_ip_app_os']
 use_features = ['app','device','os','channel','total_click','click_per_channel','click_per_os','click_app_os','click_app_channel',\
                'click_ip_app_os_device_hour','click_ip_app_os_device_minute',\
                'hour','click_ip_app_os','click_app','click_channel',\
@@ -69,28 +63,20 @@ use_features = ['app','device','os','channel','total_click','click_per_channel',
                'next_click_ip_app_os_device','next_click_ip_app_os','next_click_app_channel',\
                'p_click_ip','p_click_ip_app','p_click_ip_device','p_click_ip_os','p_click_ip_app_os_device','p_click_ip_app_os']
 
-# Prepare train
-X_train = pd.read_csv("../feature/train-day8-total.csv", dtype=dtypes)
-Y_train = X_train['is_attributed'].values
-X_train = X_train.drop(["is_attributed"], axis=1).values
-print("Finished loading train!")
+ITERATION = 1000
+NUM_TRAIN = 20000000
+NUM_CV = 10000000
 
-# Prepare validation
-X_cv = pd.read_csv("../feature/train-day9-total.csv", dtype=dtypes)
-Y_cv = X_cv['is_attributed'].values
-X_cv = X_cv.drop(["is_attributed"], axis=1).values
-print("Finished loading cv!")
+X_day8 = pd.read_csv("../feature/train-day8-total.csv", dtype=dtypes, skiprows=range(1, 62945076-NUM_TRAIN))
+X_day9 = pd.read_csv("../feature/train-day9-total.csv", dtype=dtypes, skiprows=range(1, 53016938-NUM_CV))
 
+Y_day8 = X_day8["is_attributed"]
+X_day8 = X_day8.drop(["is_attributed"], axis=1)
+Y_day9 = X_day9["is_attributed"]
+X_day9 = X_day9.drop(["is_attributed"], axis=1)
 
-import lightgbm as lgbm
-
-gbm_train = lgbm.Dataset(X_train, Y_train, feature_name=use_features,\
-                 categorical_feature=['app','device','os','channel','hour'])
-gbm_cv = lgbm.Dataset(X_cv, Y_cv, feature_name=use_features,\
-                categorical_feature=['app','device','os','channel','hour'])
-    
-del X_train, Y_train, X_cv, Y_cv
-gc.collect()
+gbm_train = lgbm.Dataset(X_day8, Y_day8, categorical_feature=['app','device','os','channel','hour'])
+gbm_cv = lgbm.Dataset(X_day9, Y_day9, categorical_feature=['app','device','os','channel','hour'])
 
 params = {
         # Task based parameter
@@ -111,9 +97,13 @@ params = {
         # Others
         'metric': 'auc',
         'num_threads': 16,
-        'scale_pos_weight': 200
+        'scale_pos_weight': 200,
 }
 
 bst = lgbm.train(params, gbm_train, valid_sets=[gbm_cv], early_stopping_rounds=10)
-bst.save_model('model.txt', num_iteration=bst.best_iteration)
+#    bst.save_model('model.txt', num_iteration=bst.best_iteration)
+cv_pred = bst.predict(X_day9, num_iteration=bst.best_iteration)
+score = roc_auc_score(Y_day9, cv_pred)
+print(score)
+
 
