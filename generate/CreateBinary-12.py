@@ -57,28 +57,37 @@ dtypes = {
     'next_click_ip_app_os':'float64',
     'next_click_app_channel':'float64',
     'p_click_ip_app_os_device':'uint32',
-    'p_click_ip_app_os':'uint32'
+    'p_click_ip_app_os':'uint32',
+    'tar_app':'float32',
+    'tar_os':'float32',
+    'tar_device':'float32',
+    'tar_channel':'float32'
 }
 
 #use_features = ['app','device','os','channel','total_click','click_per_channel','click_per_os','click_app_os','click_app_channel','click_os_channel','click_ip_app_os_channel_hour',\
 #               'click_ip_app_os_device_hour','click_ip_app_os_device_minute','click_app_device','click_os_device','ins_minute_ave',\
 #               'hour','click_device_channel','click_ip_app_os']
-use_features = ['app','device','os','channel','total_click','click_per_channel','click_per_os','click_app_os','click_app_channel',\
+all_features = ['app','device','os','channel','is_attributed','total_click','click_per_channel','click_per_os','click_app_os','click_app_channel',\
                'click_ip_app_os_device_hour','click_ip_app_os_device_minute',\
                'hour','click_ip_app_os','click_app','click_channel',\
                'next_click_ip','next_click_ip_channel','next_click_ip_app','next_click_ip_device','next_click_ip_os',\
                'next_click_ip_app_os_device','next_click_ip_app_os','next_click_app_channel',\
                'p_click_ip','p_click_ip_app','p_click_ip_device','p_click_ip_os','p_click_ip_app_os_device','p_click_ip_app_os']
 
+individuals = [1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0]
+use_features = [all_features[i] for i in range(len(individuals)) if individuals[i] == 1]
+
+
 # Prepare train
-train_6 = pd.read_csv("../feature/train-day6-total.csv", dtype=dtypes)
-train_7 = pd.read_csv("../feature/train-day7-total.csv", dtype=dtypes)
-train_8 = pd.read_csv("../feature/train-day8-total.csv", dtype=dtypes)
-train_9 = pd.read_csv("../feature/train-day9-total.csv", dtype=dtypes)
-X_total = pd.concat([train_6, train_7, train_8, train_9], axis=0, ignore_index=True)
+train_6 = pd.read_csv("../feature/train-day6-total.csv", dtype=dtypes, usecols=use_features).values
+train_7 = pd.read_csv("../feature/train-day7-total.csv", dtype=dtypes, usecols=use_features).values
+train_8 = pd.read_csv("../feature/train-day8-total.csv", dtype=dtypes, usecols=use_features).values
+train_9 = pd.read_csv("../feature/train-day9-total.csv", dtype=dtypes, usecols=use_features).values
+X_total = np.concatenate([train_6, train_7, train_8, train_9], axis=0)
 del train_6, train_7, train_8, train_9
 gc.collect()
 
+X_total = pd.DataFrame(X_total, columns=use_features)
 N = X_total.shape[0]
 N_cv = 25000000
 Y_total = X_total["is_attributed"]
@@ -97,9 +106,8 @@ gc.collect()
 #gbm_train.save_binary("../feature/train-8.bin")
 #print("Finished save day 8 binary")
 
-gbm_train = lgbm.Dataset(X_train, Y_train, feature_name=use_features,\
-                 categorical_feature=['app','device','os','channel','hour'])
-gbm_train.save_binary("../feature/train-total.bin")
+gbm_train = lgbm.Dataset(X_train, Y_train, categorical_feature=['app','device','os','channel','hour'])
+gbm_train.save_binary("../feature/train-12fea.bin")
 print("Finished loading train")
 
 # Prepare train
@@ -135,7 +143,7 @@ print("Finished loading train")
 #print("Finished loading test!")
 
 gbm_cv = gbm_train.create_valid(X_cv, Y_cv)
-gbm_cv.save_binary("../feature/cv-total.bin")
+gbm_cv.save_binary("../feature/cv-12fea.bin")
 print("Finished save cv binary")
 
 
